@@ -32,13 +32,6 @@ dependencies {
     implementation "net.neoforged:neoforge:${project.neo_version}"
 }
 
-// ─── Mixin refmap ─────────────────────────────────────────────────────────────
-// NeoForge ship Mixin ; on configure juste le refmap
-tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs << '-AreobfuscationFileName=ofem-refmap.json'
-}
-
-// ─── Processus des ressources ─────────────────────────────────────────────────
 tasks.named('processResources', ProcessResources).configure {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
@@ -65,5 +58,4 @@ tasks.named('jar', Jar).configure {
                 'MixinConfigs': 'ofem.mixins.json'
         ])
     }
-    finalizedBy 'reobfJar'
 }
