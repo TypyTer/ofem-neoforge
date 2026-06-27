@@ -10,7 +10,6 @@ import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -25,11 +24,8 @@ import java.util.List;
 @Mixin(Entity.class)
 public abstract class EntityMoveMixin {
 
-    @Shadow
-    public abstract Level level();
-
-    @Shadow
-    public abstract AABB getBoundingBox();
+    @Shadow public abstract Level level();
+    @Shadow public abstract AABB getBoundingBox();
 
     @Inject(
         method = "collide(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;",
@@ -58,18 +54,15 @@ public abstract class EntityMoveMixin {
             final AABB entityBB = this.getBoundingBox();
             final Entity self   = (Entity)(Object)this;
 
-            final double M      = 1.0E-7D;
-            final AABB searchBB = ofem$slimAABB(entityBB, movement, dominantAxis, M);
-
-            final CollisionContext ctx    = CollisionContext.of(self);
+            final AABB searchBB = ofem$slimAABB(entityBB, movement, dominantAxis, 1.0E-7D);
+            final CollisionContext ctx = CollisionContext.of(self);
             final List<VoxelShape> shapes = new ArrayList<>();
 
-            BlockPos.betweenClosedStream(searchBB).forEach(blockPos -> {
-                if (!world.isLoaded(blockPos)) return;
-                var blockState = world.getBlockState(blockPos);
-                var shape = blockState.getCollisionShape(world, blockPos, ctx);
+            BlockPos.betweenClosedStream(searchBB).forEach(pos -> {
+                if (!world.isLoaded(pos)) return;
+                var shape = world.getBlockState(pos).getCollisionShape(world, pos, ctx);
                 if (!shape.isEmpty()) {
-                    shapes.add(shape.move(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
+                    shapes.add(shape.move(pos.getX(), pos.getY(), pos.getZ()));
                 }
             });
 
@@ -79,24 +72,17 @@ public abstract class EntityMoveMixin {
                 shapes.add(borderShape);
             }
 
-            // Calcul axis-by-axis comme vanilla, mais avec notre liste réduite
-            Vec3 result = movement;
-            for (VoxelShape shape : shapes) {
-                result = shape.collide(Direction.Axis.X, entityBB.move(
-                        result.x - movement.x, result.y - movement.y, result.z - movement.z), result);
-            }
-            // Recalcul simplifié axe par axe
-            double mx = movement.x, my = movement.y, mz = movement.z;
+            double mx = sx, my = sy, mz = sz;
             for (VoxelShape shape : shapes) {
                 mx = shape.collide(Direction.Axis.X, entityBB, mx);
             }
-            AABB bbAfterX = entityBB.move(mx, 0, 0);
+            AABB bbX = entityBB.move(mx, 0, 0);
             for (VoxelShape shape : shapes) {
-                my = shape.collide(Direction.Axis.Y, bbAfterX, my);
+                my = shape.collide(Direction.Axis.Y, bbX, my);
             }
-            AABB bbAfterXY = bbAfterX.move(0, my, 0);
+            AABB bbXY = bbX.move(0, my, 0);
             for (VoxelShape shape : shapes) {
-                mz = shape.collide(Direction.Axis.Z, bbAfterXY, mz);
+                mz = shape.collide(Direction.Axis.Z, bbXY, mz);
             }
 
             cir.setReturnValue(new Vec3(mx, my, mz));
