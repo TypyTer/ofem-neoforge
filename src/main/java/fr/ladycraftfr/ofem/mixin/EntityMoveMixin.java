@@ -27,6 +27,9 @@ public abstract class EntityMoveMixin {
     @Shadow public abstract Level level();
     @Shadow public abstract AABB getBoundingBox();
 
+    @Unique
+    private static long optimizedCalls = 0;
+
     @Inject(
         method = "collide(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/Vec3;",
         at = @At("HEAD"),
@@ -43,16 +46,28 @@ public abstract class EntityMoveMixin {
         final double threshold = cfg.getSpeedThreshold();
         if (speedSq <= threshold * threshold) return;
 
+        // ===== DEBUG =====
+        optimizedCalls++;
+
+        if (optimizedCalls % 1000 == 0) {
+            OFEMMod.LOGGER.info(
+                    "[OFEM] Optimized collisions: {} | speed={}",
+                    optimizedCalls,
+                    Math.sqrt(speedSq)
+            );
+        }
+        // =================
+
         final double ax = Math.abs(sx), ay = Math.abs(sy), az = Math.abs(sz);
         final int dominantAxis;
-        if (ax >= ay && ax >= az)  dominantAxis = 0;
-        else if (ay >= az)         dominantAxis = 1;
-        else                       dominantAxis = 2;
+        if (ax >= ay && ax >= az) dominantAxis = 0;
+        else if (ay >= az) dominantAxis = 1;
+        else dominantAxis = 2;
 
         try {
-            final Level world   = this.level();
+            final Level world = this.level();
             final AABB entityBB = this.getBoundingBox();
-            final Entity self   = (Entity)(Object)this;
+            final Entity self = (Entity)(Object)this;
 
             final AABB searchBB = ofem$slimAABB(entityBB, movement, dominantAxis, 1.0E-7D);
             final CollisionContext ctx = CollisionContext.of(self);
@@ -73,14 +88,19 @@ public abstract class EntityMoveMixin {
             }
 
             double mx = sx, my = sy, mz = sz;
+
             for (VoxelShape shape : shapes) {
                 mx = shape.collide(Direction.Axis.X, entityBB, mx);
             }
+
             AABB bbX = entityBB.move(mx, 0, 0);
+
             for (VoxelShape shape : shapes) {
                 my = shape.collide(Direction.Axis.Y, bbX, my);
             }
+
             AABB bbXY = bbX.move(0, my, 0);
+
             for (VoxelShape shape : shapes) {
                 mz = shape.collide(Direction.Axis.Z, bbXY, mz);
             }
