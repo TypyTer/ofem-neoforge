@@ -1,6 +1,6 @@
-package com.typyter.ofem.mixin;
+package fr.ladycraftfr.ofem.mixin;
 
-import com.typyter.ofem.util.AxisSweepCollision;
+import fr.ladycraftfr.ofem.util.AxisSweepCollision;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
