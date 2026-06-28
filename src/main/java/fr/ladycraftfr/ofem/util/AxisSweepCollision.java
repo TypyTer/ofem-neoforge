@@ -1,4 +1,4 @@
-package com.typyter.ofem.util;
+package fr.ladycraftfr.ofem.util;
 
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
